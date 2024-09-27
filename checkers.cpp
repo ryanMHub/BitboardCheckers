@@ -23,14 +23,21 @@ void initializeBoard(unsigned int* board){
 //display board
 void displayBoard(unsigned int* board){
     cout << "Player {insert variable here}\n";
+    int row = 0;
 
     for(int i = 0 ; i < 32 ; i++){
-        if(i%8 == 0) cout << "\n"; //every 8 steps start a new line
-        if(board[0] & (1 << i)) cout << "P1 ";
-        else if(board[1] & (1 << i)) cout << "P2 ";
-        else cout << ". ";
+        if(i%4 == 0){
+            cout << "\n"; //every 8 steps start a new line
+            row++;
+        }       
+
+        if(board[0] & (1 << i)) (row%2==0)?cout << "X P1 ": cout <<"P1 X ";
+        else if(board[1] & (1 << i)) (row%2==0)?cout << "X P2 ": cout <<"P2 X ";
+        else (row%2==0)?cout << "X  . ": cout <<".  X ";;
     }
     cout << "\n";
 }
+
+//display board overloaded to display available moves to the user that are mapped to letters
 
 
