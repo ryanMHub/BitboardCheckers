@@ -2,6 +2,7 @@
 #include <map>
 #include <vector>
 #include <optional>
+#include <tuple>
 
 using namespace std;
 
@@ -36,8 +37,9 @@ void initializeBoard(unsigned int*); //intitialize player boards
 void displayBoard(unsigned int*); //display board state
 void displayBoard(unsigned int*, unsigned int, map<int, char>&);
 
-
+//game management utility functions
 Border checkBorder(int); //get the position of piece relative to border
+string getCoor(int);
 
 //utility functions
 int checkBit(unsigned int, int);
@@ -47,12 +49,13 @@ unsigned int setBit(unsigned int, int);
 void moveController(Player);
 void buildMovesMap(Player, unsigned int*, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&);
 void updateMovesParameters(const std::vector<Move>&, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&, char&);
+std::tuple<char, int> getUserSelection(map<char, vector<Move>>&);
 std::optional<Move> checkMove(Player, Border, unsigned int*, int, int);
 std::optional<Move> checkJump(Player, Border, unsigned int*, int, int);
 
 //Test Functions
 void testMoveMapParts(unsigned int, std::map<int, char>&, std::map<char, vector<Move>>&);
-
+void displaySelection(std::tuple<char, int>);
 
 //initialize constants
 const char boardParts[2] = {176, 178}; //Characters that are used in building the board
@@ -79,7 +82,7 @@ void initializeBoard(unsigned int* board){
     board[1] = 0xFFF00000; //initialize player 2
 }
 
-//TODO: *************************************************************Allow players move as parameter, if null don't print moves. Store moves in integer like the pieces mapped to 'A' the characters can increment through an integer ch = 65; ch++
+
 //display board
 void displayBoard(unsigned int* board){
     cout << "Player {insert variable here}\n";
@@ -92,9 +95,9 @@ void displayBoard(unsigned int* board){
             row++; //increment the row index every 4 steps
         }       
 
-        if(board[0] & (1 << i)) (row%2==0)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
-        else if(board[1] & (1 << i)) (row%2==0)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
-        else (row%2==0)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
+        if(checkBit(board[0],i)) (row%2==1)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
+        else if(checkBit(board[1],i)) (row%2==1)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
+        else (row%2==1)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
     }    
     cout << "||\n =====================" << endl;
 }
@@ -114,10 +117,10 @@ void displayBoard(unsigned int* board, unsigned int moveBoard, map<int, char>& i
             row++; //increment the row index every 4 steps
         }       
 
-        if(checkBit(board[0], i)) (row%2==0)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
-        else if(checkBit(board[1], i)) (row%2==0)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
-        else if(checkBit(moveBoard, i)) (row%2==0)?cout << boardParts[1] << " " << indexToChar[i] << " " : cout << indexToChar[i] << " " << boardParts[1] << " ";
-        else (row%2==0)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
+        if(checkBit(board[0], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
+        else if(checkBit(board[1], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
+        else if(checkBit(moveBoard, i)) (row%2==1)?cout << boardParts[1] << " " << indexToChar[i] << " " : cout << indexToChar[i] << " " << boardParts[1] << " ";
+        else (row%1==0)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
     }    
     cout << "||\n   =====================" << endl;
 }
@@ -135,11 +138,54 @@ void moveController(Player current){
     displayBoard(board, movesBoard, indexToChar);
 
     //prompt user for selection
-
+    std::tuple<char, int> selection = getUserSelection(charToPiece);
+    displaySelection(selection);
 
     //Do I need to destroy all of above after using
 
     //return selection
+}
+
+//test selection function
+void displaySelection(std::tuple<char, int> selection){
+    char row;
+    int col;
+    std::tie(row, col) = selection;
+    cout << "Selected Coordinate: " << row << " " << col;
+}
+
+//prompt user to select a letter of the board that has an open move. Then select the specific token to move. Returning a tuple containing the coordinates.
+std::tuple<char, int> getUserSelection(map<char, vector<Move>>& charToPiece){
+    string keyInput;
+
+    while(true){
+        cout << "\nEnter the letter of the desired move. _>>> ";
+        cin >> keyInput;
+        if(charToPiece.find(toupper(keyInput[0])) != charToPiece.end()){
+            break;
+        }
+        cout << "\nNot a valid move. Try again! =>>> ";
+    }
+
+    string pieceInput;
+    cout << "\nBelow is a list of pieces that can move to your selection.\n";
+    int i = 0;
+    for(auto& move : charToPiece[toupper(keyInput[0])]){
+        cout << "\n" << i << " -- " << getCoor(move.start);
+        i++;
+    }
+    cout << "\n-------> ";
+
+    while(true){
+        cin >> pieceInput;
+        if(!isdigit(pieceInput[0]) && (isdigit(pieceInput[0]) < 0 || isdigit(pieceInput[0]) >= charToPiece[toupper(keyInput[0])].size())){
+            cout << "Invalid -------->";
+        } else {
+            break;
+        }
+    }
+    
+    return std::make_tuple(toupper(keyInput[0]), (pieceInput[0]-'0'));
 }
 
 void testMoveMapParts(unsigned int movesBoard, std::map<int, char>& indexToChar, std::map<char, vector<Move>>& charToPiece){
@@ -162,6 +208,7 @@ void testMoveMapParts(unsigned int movesBoard, std::map<int, char>& indexToChar,
     }
 }
 
+//build all of the possible moves for player based on Player current
 void buildMovesMap(Player current, unsigned int* board, unsigned int& movesBoard, std::map<int, char>& indexToChar, std::map<char, vector<Move>>& charToPiece) {
     char moveMarkerCounter = 'A';
     for(int i = 0 ; i < 32 ; i++){
@@ -266,6 +313,20 @@ int checkBit(unsigned int num, int position){
 //set bit at given location to 1
 unsigned int setBit(unsigned int value, int position){
     return value | (1 << position);
+}
+
+//returns a text based version of the coordinate of the point of the bit on the checker board
+string getCoor(int position){
+    string coordinate;
+
+    int row = position/4;
+    int oddEven = row%2;
+    
+    char rowLetter = 65+row;
+    coordinate.push_back(rowLetter);
+    char col = ((oddEven)?((position%4)*2):((position%4)*2+1))+'0'; 
+    coordinate.push_back(col);
+    return coordinate;    
 }
 
 //return the state of the position of the current integer relative to the border
