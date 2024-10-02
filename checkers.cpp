@@ -1,7 +1,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include <optional>
+#include <optional> //TODO: possibly not used
 #include <tuple>
 
 using namespace std;
@@ -26,10 +26,10 @@ struct Move {
     int start;
     int end;
     bool jump;
-    int opponent;
+    vector<int> opponent;
 
     //constructor for Move struct
-    Move(int start, int end, bool jump, int opponent) : start(start), end(end), jump(jump), opponent(opponent) {}
+    Move(int start, int end, bool jump, vector<int> opponent) : start(start), end(end), jump(jump), opponent(opponent) {}
 };
 
 //initialize functions
@@ -44,18 +44,22 @@ string getCoor(int);
 //utility functions
 int checkBit(unsigned int, int);
 unsigned int setBit(unsigned int, int);
+int flipBit(unsigned int);
 
 //Move Mapping Functions
 void moveController(Player);
 void buildMovesMap(Player, unsigned int*, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&);
 void updateMovesParameters(const std::vector<Move>&, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&, char&);
 std::tuple<char, int> getUserSelection(map<char, vector<Move>>&);
-std::optional<Move> checkMove(Player, Border, unsigned int*, int, int);
-std::optional<Move> checkJump(Player, Border, unsigned int*, int, int);
+void checkMove(Player, Border, std::vector<Move>, unsigned int*, int, int);
+void getJumpMoves(vector<Move>, Move, Player, unsigned int*, int, int);
+tuple<bool, std::vector<int>> checkForOpponent(Player, unsigned int*, int);
+std::tuple<bool, int> checkJump(Player, unsigned int*, int, int);
+//std::optional<Move> checkJump(Player, Border, unsigned int*, int, int);
 
 //Test Functions
 void testMoveMapParts(unsigned int, std::map<int, char>&, std::map<char, vector<Move>>&);
-void displaySelection(std::tuple<char, int>);
+void testSelection(std::tuple<char, int>);
 
 //initialize constants
 const char boardParts[2] = {176, 178}; //Characters that are used in building the board
@@ -130,7 +134,7 @@ void moveController(Player current){
     unsigned int movesBoard = 0;
     std::map<int, char> indexToChar;
     std::map<char, vector<Move>> charToPiece;
-
+    
     //call function to get moves passing all above as reference.
     buildMovesMap(current, board, movesBoard, indexToChar, charToPiece);    
 
@@ -139,15 +143,14 @@ void moveController(Player current){
 
     //prompt user for selection
     std::tuple<char, int> selection = getUserSelection(charToPiece);
-    displaySelection(selection);
-
+    
     //Do I need to destroy all of above after using
 
     //return selection
 }
 
 //test selection function
-void displaySelection(std::tuple<char, int> selection){
+void testSelection(std::tuple<char, int> selection){
     char row;
     int col;
     std::tie(row, col) = selection;
@@ -203,7 +206,7 @@ void testMoveMapParts(unsigned int movesBoard, std::map<int, char>& indexToChar,
             cout << " Start: " << move.start
                 << " End: " << move.end
                 << " Jump: " << (move.jump?"Yes":"No")
-                << " Opponent: " << move.opponent << endl;
+                << " Opponent: " << " Add Opponents" << endl;
         }
     }
 }
@@ -223,20 +226,10 @@ void buildMovesMap(Player current, unsigned int* board, unsigned int& movesBoard
             continue;
         } else if(border == LEFT || border == RIGHT){
             //cout << "I have been Called     " << i << endl;
-            move = checkMove(current, border, board, i, ((current == PLAYERONE)?(4+i):(-4+i)));
-            if(move.has_value()){
-                //cout << "This is the index added " << i << endl;
-                moves.push_back(move.value());
-            }
+            checkMove(current, border, moves, board, i, ((current == PLAYERONE)?(4+i):(-4+i)));            
         } else {
-            move = checkMove(current, border, board, i, (i + steps[current][((i/4)%2)][0])); //TODO: can I reduce some of these optional if statements, Is there a cleaner way to approach
-            if(move.has_value()){
-                moves.push_back(move.value());
-            }
-            move = checkMove(current, border, board, i, (i + steps[current][((i/4)%2)][1]));
-            if(move.has_value()){
-                moves.push_back(move.value());
-            }
+            checkMove(current, border, moves, board, i, (i + steps[current][((i/4)%2)][0])); //TODO: can I reduce some of these optional if statements, Is there a cleaner way to approach            
+            checkMove(current, border, moves, board, i, (i + steps[current][((i/4)%2)][1]));            
         } 
 
         //call function that will map available moves if moves vector is not empty
@@ -261,22 +254,80 @@ void updateMovesParameters(const std::vector<Move>& moves, unsigned int& movesBo
     }
 }
 
-//TODO: Maybe I don't need the pointer
+//TODO: Maybe I don't need the pointer. Also I need to chop this up so that jump is seperate from checking for the move, or just send back a vector or pass the vector from caller. Drop the optional and switch to a void function that updates the moves at it goes
 //check the specified move, determine if it is suitable move orif a jump is required and succesful
-std::optional<Move> checkMove(Player current, Border border, unsigned int* board, int i, int movePosition){
-    if(checkBit(board[current], movePosition)){
-        //cout << "The move is null " << i << " " << movePosition << endl;
-        return std::nullopt;
-    } else if(checkBit(board[current&1], movePosition)){
-        return checkJump(current, border, board, i, movePosition);
-    }
-    return Move(i, movePosition, false, -1);
+void checkMove(Player current, Border border, std::vector<Move> moves, unsigned int* board, int i, int movePosition){
+    if(checkBit(board[current], movePosition)){        
+        return ;
+    } else if(checkBit(board[flipBit(current)], movePosition)){ //TODO: This may not work as I intend
+        std::vector<int> opponents;
+        getJumpMoves(moves, Move(i, -1, false, opponents), current, board, i, movePosition);
+    } else {
+        std::vector<int> opponents;
+        moves.push_back(Move(i, movePosition, false, opponents));
+    }   
 }
 
-//returns the move generated when jumping an opponent, nullopt when no move
-std::optional<Move> checkJump(Player current, Border border, unsigned int* board, int i, int oppPosition){
+void getJumpMoves(vector<Move> moves, Move move, Player current, unsigned int* board, int i, int opponent){
+    //if no open space or out or bounds return
+    int dest;
+    bool success;
+    std::tie(success, dest) = checkJump(current, board, i, opponent);
+    if(!success){
+        return;
+    }
 
+    //create the current Move
+    //store the current Move
+    move.end = dest;
+    move.jump = true;
+    move.opponent.push_back(opponent);
+    moves.push_back(move);
+
+    //get available opponents to capture
+    std::vector<int> opponents;
+    std::tie(success, opponents) = checkForOpponent(current, board, i);
+  
+    //Cycle through available opponents using recursion
+    if(success){
+        for(auto& opp : opponents){
+            getJumpMoves(moves, move, current, board, dest, opp);
+        }
+    }   
+
+}
+
+tuple<bool, std::vector<int>> checkForOpponent(Player current, unsigned int* board, int i) {
+    bool success;
+    std::vector<int> oppPositions;
+    int locPoint = -1;
+    Border border = checkBorder(i);
+
+    if(border == TOP && current == PLAYERTWO) {
+            success = false;
+    } else if(border == BOTTOM && current == PLAYERONE){
+        success = false;
+    } else if(border == LEFT || border == RIGHT){
+        locPoint = ((current == PLAYERONE)?(4+i):(-4+i));
+        success = checkBit(board[flipBit(current)], locPoint);
+        if(success) oppPositions.push_back(locPoint);           
+    } else {
+        locPoint = (i + steps[current][((i/4)%2)][0]);
+        success = checkBit(board[flipBit(current)], locPoint);
+        if(success) oppPositions.push_back(locPoint);
+        
+        locPoint = (i + steps[current][((i/4)%2)][1]);
+        success = checkBit(board[flipBit(current)], locPoint);
+        if(success) oppPositions.push_back(locPoint);
+    } 
+
+    return make_tuple(success, oppPositions);
+}
+
+std::tuple<bool, int> checkJump(Player current, unsigned int* board, int i, int oppPosition){
     int dest = -1;
+    bool success = false;
+    Border border = checkBorder(i);
 
     if(border == LEFT){
         dest = (current == PLAYERONE)?(i+9):(i-7);        
@@ -293,9 +344,34 @@ std::optional<Move> checkJump(Player current, Border border, unsigned int* board
             dest = i + ((current == PLAYERONE)?((row == 0)?7:9):((row==0)?-9:-7));
         }        
     }
-
-    return (checkBit(board[current], dest)==0)?std::optional<Move>(Move(i, dest, true, oppPosition)):std::nullopt;
+    success = (current == PLAYERONE && dest > 31)||(current == PLAYERTWO && dest < 0)?0:1;
+    success &= (checkBit(board[current], dest) == 0 && checkBit(board[flipBit(current)], dest) == 0)?1:0;
+    return std::make_tuple(success, dest);
 }
+
+// //returns the move generated when jumping an opponent, nullopt when no move
+// std::optional<Move> checkJump(Player current, Border border, unsigned int* board, int i, int oppPosition){
+
+//     int dest = -1;
+
+//     if(border == LEFT){
+//         dest = (current == PLAYERONE)?(i+9):(i-7);        
+//     } else if( border == RIGHT){
+//         dest = (current == PLAYERONE)?(i+7):(i-9);        
+//     } else {
+//         int row = (i/4)%2;
+//         int diff = abs(oppPosition-i);
+//         if(diff > 4) {
+//             dest = i + (current == PLAYERONE)?(9):(-9);
+//         } else if(diff < 4) {
+//             dest = i + (current == PLAYERONE)?(7):(-7);
+//         } else {
+//             dest = i + ((current == PLAYERONE)?((row == 0)?7:9):((row==0)?-9:-7));
+//         }        
+//     }
+
+//     return (checkBit(board[current], dest)==0)?std::optional<Move>(Move(i, dest, true, oppPosition)):std::nullopt;
+// }
 
 
 
@@ -311,8 +387,13 @@ int checkBit(unsigned int num, int position){
 }
 
 //set bit at given location to 1
-unsigned int setBit(unsigned int value, int position){
+unsigned int setBit(unsigned int value, int position){    
     return value | (1 << position);
+}
+
+//return flipped bit value
+int flipBit(unsigned int value){
+    return value^1;
 }
 
 //returns a text based version of the coordinate of the point of the bit on the checker board
