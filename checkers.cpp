@@ -51,8 +51,8 @@ void moveController(Player);
 void buildMovesMap(Player, unsigned int*, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&);
 void updateMovesParameters(const std::vector<Move>&, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&, char&);
 std::tuple<char, int> getUserSelection(map<char, vector<Move>>&);
-void checkMove(Player, Border, std::vector<Move>, unsigned int*, int, int);
-void getJumpMoves(vector<Move>, Move, Player, unsigned int*, int, int);
+void checkMove(Player, Border, std::vector<Move>&, unsigned int*, int, int);
+void getJumpMoves(std::vector<Move>&, Move, Player, unsigned int*, int, int);
 tuple<bool, std::vector<int>> checkForOpponent(Player, unsigned int*, int);
 std::tuple<bool, int> checkJump(Player, unsigned int*, int, int);
 //std::optional<Move> checkJump(Player, Border, unsigned int*, int, int);
@@ -256,7 +256,7 @@ void updateMovesParameters(const std::vector<Move>& moves, unsigned int& movesBo
 
 //TODO: Maybe I don't need the pointer. Also I need to chop this up so that jump is seperate from checking for the move, or just send back a vector or pass the vector from caller. Drop the optional and switch to a void function that updates the moves at it goes
 //check the specified move, determine if it is suitable move orif a jump is required and succesful
-void checkMove(Player current, Border border, std::vector<Move> moves, unsigned int* board, int i, int movePosition){
+void checkMove(Player current, Border border, std::vector<Move>& moves, unsigned int* board, int i, int movePosition){
     if(checkBit(board[current], movePosition)){        
         return ;
     } else if(checkBit(board[flipBit(current)], movePosition)){ //TODO: This may not work as I intend
@@ -268,7 +268,7 @@ void checkMove(Player current, Border border, std::vector<Move> moves, unsigned 
     }   
 }
 
-void getJumpMoves(vector<Move> moves, Move move, Player current, unsigned int* board, int i, int opponent){
+void getJumpMoves(std::vector<Move>& moves, Move move, Player current, unsigned int* board, int i, int opponent){
     //if no open space or out or bounds return
     int dest;
     bool success;
