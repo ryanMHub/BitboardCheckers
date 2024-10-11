@@ -44,10 +44,11 @@ string getCoor(int);
 //utility functions
 int checkBit(unsigned int, int);
 unsigned int setBit(unsigned int, int);
-int flipBit(unsigned int);
+int flipNumber(int);
+unsigned int flipBit(unsigned int, int);
 
 //Move Mapping Functions
-void moveController(Player);
+void moveController(Player, unsigned int*);
 void buildMovesMap(Player, unsigned int*, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&);
 void updateMovesParameters(const std::vector<Move>&, unsigned int&, std::map<int, char>&, std::map<char, vector<Move>>&, char&);
 std::tuple<char, int> getUserSelection(map<char, vector<Move>>&);
@@ -55,7 +56,14 @@ void checkMove(Player, Border, std::vector<Move>&, unsigned int*, int, int);
 void getJumpMoves(std::vector<Move>&, Move, Player, unsigned int*, int, int);
 tuple<bool, std::vector<int>> checkForOpponent(Player, unsigned int*, int);
 std::tuple<bool, int> checkJump(Player, unsigned int*, int, int);
-//std::optional<Move> checkJump(Player, Border, unsigned int*, int, int);
+void executeMove(Player, unsigned int*, Move);
+
+//game management
+void gameController(unsigned int*);
+std::tuple<int, int> checkScore(unsigned int*);
+int countBits(int, unsigned int*);
+void pause();
+void clear();
 
 //Test Functions
 void testMoveMapParts(unsigned int, std::map<int, char>&, std::map<char, vector<Move>>&);
@@ -67,23 +75,24 @@ const char pieces[2] = {224,234}; //player pieces options
 unsigned int board[2]; //this array will store the boards for player 1 = board[0] and player 2 = board[1]
 
 //The distance that each checker can move based on the player, row, left or right piece is stored in this 3D
-const int steps[2][2][2] = { { {4, 5}, {3, 4} },  { {-4, -3}, {-5, -4} } };
+const int steps[2][2][2] = { 
+                                { {4, 5}, {3, 4} },  
+                                { {-4, -3}, {-5, -4}} 
+                            };
 
 
 
 
-int main(){
-    Player currentPlayer = PLAYERONE;
-    initializeBoard(board); //initialize the the boards of each player using board array
-    displayBoard(board); //display the board using the board array for data of players location
-    moveController(currentPlayer);
+int main(){   
+    
+    gameController(board);
     return 0;    
 }
 
 //initialize the game boards of each player with the given array
 void initializeBoard(unsigned int* board){
     board[0] = 0x00000FFF; //initialize player 1
-    board[1] = 0xFFF00000; //initialize player 2
+    board[1] = 0xFF00F000; //initialize player 2
 }
 
 
@@ -124,12 +133,12 @@ void displayBoard(unsigned int* board, unsigned int moveBoard, map<int, char>& i
         if(checkBit(board[0], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
         else if(checkBit(board[1], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
         else if(checkBit(moveBoard, i)) (row%2==1)?cout << boardParts[1] << " " << indexToChar[i] << " " : cout << indexToChar[i] << " " << boardParts[1] << " ";
-        else (row%1==0)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
+        else (row%1==1)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
     }    
     cout << "||\n   =====================" << endl;
 }
 
-void moveController(Player current){
+void moveController(Player current, unsigned int* board){
     //initialize int moves, map index to 'Char' increment using above idea, map 'Char' to set of struct move
     unsigned int movesBoard = 0;
     std::map<int, char> indexToChar;
@@ -141,12 +150,62 @@ void moveController(Player current){
     //display moves with modified displayBoard
     displayBoard(board, movesBoard, indexToChar);
 
+    char key;
+    int index;
+
     //prompt user for selection
-    std::tuple<char, int> selection = getUserSelection(charToPiece);
+    std::tie(key, index) = getUserSelection(charToPiece);
+
+    //make move on the board
+    executeMove(current, board, charToPiece[key].at(index));
     
     //Do I need to destroy all of above after using
+    displayBoard(board);
 
     //return selection
+}
+
+void gameController(unsigned int* board){
+    const int TOTAL_PIECES = 24;
+    initializeBoard(board); //initialize the the boards of each player using board array
+    Player current = PLAYERONE;
+    bool running = true;
+    int scores[] = {0, 0};
+
+    while(running){
+        displayBoard(board);
+        pause();
+        clear();
+        moveController(current, board);
+        std::tie(scores[0], scores[1]) = checkScore(board);
+        running = (scores[0] == TOTAL_PIECES || scores[1] == TOTAL_PIECES)?false:true;
+        current = static_cast<Player>(flipNumber(current));
+    }
+}
+
+std::tuple<int, int> checkScore(unsigned int* board){
+    int playerOne = countBits(0, board);
+    int playerTwo = countBits(1, board);
+    //TODO: add king check
+    return std::make_tuple(playerOne, playerTwo);
+}
+
+int countBits(int player, unsigned int* board){
+    int count = 0;
+    for(int i = 0 ; i < 32 ; i++){
+        count += (checkBit(board[player], i))?1:0;
+    }
+    return count;
+}
+
+
+void pause(){
+    cout << "Press Any Key..................";
+    cin.get();
+}
+
+void clear(){
+    cout << "\033[2J\033[H";
 }
 
 //test selection function
@@ -157,6 +216,7 @@ void testSelection(std::tuple<char, int> selection){
     cout << "Selected Coordinate: " << row << " " << col;
 }
 
+//TODO: I need to come up with a way to test the jump tree and display of the opponents when displaying move options
 //prompt user to select a letter of the board that has an open move. Then select the specific token to move. Returning a tuple containing the coordinates.
 std::tuple<char, int> getUserSelection(map<char, vector<Move>>& charToPiece){
     string keyInput;
@@ -175,6 +235,12 @@ std::tuple<char, int> getUserSelection(map<char, vector<Move>>& charToPiece){
     int i = 0;
     for(auto& move : charToPiece[toupper(keyInput[0])]){
         cout << "\n" << i << " -- " << getCoor(move.start);
+        if(!move.opponent.empty()) {
+            cout << " Captured Opponents: ";
+            for(auto& opp : move.opponent){
+                cout << getCoor(opp) << " ";
+            }
+        }
         i++;
     }
     cout << "\n-------> ";
@@ -191,6 +257,7 @@ std::tuple<char, int> getUserSelection(map<char, vector<Move>>& charToPiece){
     return std::make_tuple(toupper(keyInput[0]), (pieceInput[0]-'0'));
 }
 
+//Test if a parameters are functioning for the moveMapParameters
 void testMoveMapParts(unsigned int movesBoard, std::map<int, char>& indexToChar, std::map<char, vector<Move>>& charToPiece){
     cout << movesBoard << endl;
 
@@ -218,8 +285,7 @@ void buildMovesMap(Player current, unsigned int* board, unsigned int& movesBoard
         if(checkBit(board[current], i) == 0) continue; //check if there is a piece at the position, if not continue to the next location     
         Border border = checkBorder(i); //check the position of the piece relative to the borders and store its state        
         std::vector<Move> moves; //TODO: Do I need to destroy Move Struct
-        std::optional<Move> move; //Store the move that is generated by checkMove
-        
+                
         if(border == TOP && current == PLAYERTWO) {
             continue;
         } else if(border == BOTTOM && current == PLAYERONE){
@@ -228,7 +294,9 @@ void buildMovesMap(Player current, unsigned int* board, unsigned int& movesBoard
             //cout << "I have been Called     " << i << endl;
             checkMove(current, border, moves, board, i, ((current == PLAYERONE)?(4+i):(-4+i)));            
         } else {
-            checkMove(current, border, moves, board, i, (i + steps[current][((i/4)%2)][0])); //TODO: can I reduce some of these optional if statements, Is there a cleaner way to approach            
+            //cout << "\nmove: " << steps[current][((i/4)%2)][0];
+            checkMove(current, border, moves, board, i, (i + steps[current][((i/4)%2)][0])); //TODO: can I reduce some of these optional if statements, Is there a cleaner way to approach   
+            //cout << "\nmove: " << steps[current][((i/4)%2)][1];                  
             checkMove(current, border, moves, board, i, (i + steps[current][((i/4)%2)][1]));            
         } 
 
@@ -259,7 +327,7 @@ void updateMovesParameters(const std::vector<Move>& moves, unsigned int& movesBo
 void checkMove(Player current, Border border, std::vector<Move>& moves, unsigned int* board, int i, int movePosition){
     if(checkBit(board[current], movePosition)){        
         return ;
-    } else if(checkBit(board[flipBit(current)], movePosition)){ //TODO: This may not work as I intend
+    } else if(checkBit(board[flipNumber(current)], movePosition)){ //TODO: This may not work as I intend
         std::vector<int> opponents;
         getJumpMoves(moves, Move(i, -1, false, opponents), current, board, i, movePosition);
     } else {
@@ -268,17 +336,21 @@ void checkMove(Player current, Border border, std::vector<Move>& moves, unsigned
     }   
 }
 
+//recursive function that builds the jump tree for each piece. Stores the individual Move struct for each jump in the moves vector<Move>.
 void getJumpMoves(std::vector<Move>& moves, Move move, Player current, unsigned int* board, int i, int opponent){
     //if no open space or out or bounds return
     int dest;
     bool success;
+    //cout << "\nPre jump " << i << " opponent: " << opponent;
     std::tie(success, dest) = checkJump(current, board, i, opponent);
     if(!success){
+        //cout <<"\nindex = " << i << " opponent = " << opponent << " destination = " << dest;
         return;
     }
 
     //create the current Move
     //store the current Move
+    //cout << "\n I succeded " << i << " dest: " << dest << " opp: " << opponent;
     move.end = dest;
     move.jump = true;
     move.opponent.push_back(opponent);
@@ -286,17 +358,19 @@ void getJumpMoves(std::vector<Move>& moves, Move move, Player current, unsigned 
 
     //get available opponents to capture
     std::vector<int> opponents;
-    std::tie(success, opponents) = checkForOpponent(current, board, i);
+    std::tie(success, opponents) = checkForOpponent(current, board, dest);
   
     //Cycle through available opponents using recursion
     if(success){
         for(auto& opp : opponents){
+            cout << "\n" << i << " " << opp << " " << move.start;
             getJumpMoves(moves, move, current, board, dest, opp);
         }
     }   
 
 }
 
+//checks if there are available opponents for the piece to jump over. A success flag and a vector filled with the indexes of the available opponents is returned.
 tuple<bool, std::vector<int>> checkForOpponent(Player current, unsigned int* board, int i) {
     bool success;
     std::vector<int> oppPositions;
@@ -309,70 +383,58 @@ tuple<bool, std::vector<int>> checkForOpponent(Player current, unsigned int* boa
         success = false;
     } else if(border == LEFT || border == RIGHT){
         locPoint = ((current == PLAYERONE)?(4+i):(-4+i));
-        success = checkBit(board[flipBit(current)], locPoint);
+        success = checkBit(board[flipNumber(current)], locPoint);
         if(success) oppPositions.push_back(locPoint);           
     } else {
         locPoint = (i + steps[current][((i/4)%2)][0]);
-        success = checkBit(board[flipBit(current)], locPoint);
+        success = checkBit(board[flipNumber(current)], locPoint);
         if(success) oppPositions.push_back(locPoint);
         
         locPoint = (i + steps[current][((i/4)%2)][1]);
-        success = checkBit(board[flipBit(current)], locPoint);
+        success = checkBit(board[flipNumber(current)], locPoint);
         if(success) oppPositions.push_back(locPoint);
     } 
 
     return make_tuple(success, oppPositions);
 }
 
+//checks if the jump is successful returning a success flag and the index of the landing location in a tuple.
 std::tuple<bool, int> checkJump(Player current, unsigned int* board, int i, int oppPosition){
     int dest = -1;
-    bool success = false;
+    bool success = true;
     Border border = checkBorder(i);
+    int row = (i/4)%2;
+        int diff = abs(oppPosition-i);
 
     if(border == LEFT){
         dest = (current == PLAYERONE)?(i+9):(i-7);        
     } else if( border == RIGHT){
         dest = (current == PLAYERONE)?(i+7):(i-9);        
-    } else {
-        int row = (i/4)%2;
-        int diff = abs(oppPosition-i);
+    } else {        
         if(diff > 4) {
-            dest = i + (current == PLAYERONE)?(9):(-9);
+            dest = (current == PLAYERONE)?(i+9):(i-9);
         } else if(diff < 4) {
-            dest = i + (current == PLAYERONE)?(7):(-7);
+            dest = (current == PLAYERONE)?(i+7):(i-7);
         } else {
-            dest = i + ((current == PLAYERONE)?((row == 0)?7:9):((row==0)?-9:-7));
+            dest = (current == PLAYERONE)?((row == 0)?(i+7):(i+9)):((row==0)?(i-9):(i-7));
+            success &= (!(i%4 == 0 || i%4 == 3)); //TODO: NOt sure if works. prevents the edge cases that are not on the border but the adjacent side preventing attempt to jump over opponent out of bounds 
         }        
     }
-    success = (current == PLAYERONE && dest > 31)||(current == PLAYERTWO && dest < 0)?0:1;
-    success &= (checkBit(board[current], dest) == 0 && checkBit(board[flipBit(current)], dest) == 0)?1:0;
+    success &= (current == PLAYERONE && dest > 31)||(current == PLAYERTWO && dest < 0)?0:1;
+    success &= (checkBit(board[current], dest) == 0 && checkBit(board[flipNumber(current)], dest) == 0)?1:0;
     return std::make_tuple(success, dest);
 }
 
-// //returns the move generated when jumping an opponent, nullopt when no move
-// std::optional<Move> checkJump(Player current, Border border, unsigned int* board, int i, int oppPosition){
-
-//     int dest = -1;
-
-//     if(border == LEFT){
-//         dest = (current == PLAYERONE)?(i+9):(i-7);        
-//     } else if( border == RIGHT){
-//         dest = (current == PLAYERONE)?(i+7):(i-9);        
-//     } else {
-//         int row = (i/4)%2;
-//         int diff = abs(oppPosition-i);
-//         if(diff > 4) {
-//             dest = i + (current == PLAYERONE)?(9):(-9);
-//         } else if(diff < 4) {
-//             dest = i + (current == PLAYERONE)?(7):(-7);
-//         } else {
-//             dest = i + ((current == PLAYERONE)?((row == 0)?7:9):((row==0)?-9:-7));
-//         }        
-//     }
-
-//     return (checkBit(board[current], dest)==0)?std::optional<Move>(Move(i, dest, true, oppPosition)):std::nullopt;
-// }
-
+//flips all the required bit per move based on the Move struct that is passed to the func
+void executeMove(Player current, unsigned int* board, Move move){
+    board[current] = flipBit(board[current], move.start);
+    board[current] = flipBit(board[current], move.end);
+    if(move.jump){
+        for(auto& opp : move.opponent){
+            board[flipNumber(current)] = flipBit(board[flipNumber(current)], opp);
+        }
+    }
+}
 
 
 //TODO: display board overloaded to display available moves to the user that are mapped to letters
@@ -391,8 +453,13 @@ unsigned int setBit(unsigned int value, int position){
     return value | (1 << position);
 }
 
+//return the unsigned int after flipping the bit at the given location
+unsigned int flipBit(unsigned int value, int position){
+    return value ^ (1 << position);
+}
+
 //return flipped bit value
-int flipBit(unsigned int value){
+int flipNumber(int value){
     return value^1;
 }
 
