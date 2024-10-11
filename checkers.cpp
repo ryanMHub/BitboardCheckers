@@ -1,3 +1,4 @@
+#include "BitUtilities.h" //implements all of the bit manipulation methods
 #include <iostream>
 #include <map>
 #include <vector>
@@ -40,12 +41,6 @@ void displayBoard(unsigned int*, unsigned int, map<int, char>&);
 //game management utility functions
 Border checkBorder(int); //get the position of piece relative to border
 string getCoor(int);
-
-//utility functions
-int checkBit(unsigned int, int);
-unsigned int setBit(unsigned int, int);
-int flipNumber(int);
-unsigned int flipBit(unsigned int, int);
 
 //Move Mapping Functions
 void moveController(Player, unsigned int*);
@@ -108,8 +103,8 @@ void displayBoard(unsigned int* board){
             row++; //increment the row index every 4 steps
         }       
 
-        if(checkBit(board[0],i)) (row%2==1)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
-        else if(checkBit(board[1],i)) (row%2==1)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
+        if(BitUtilities::checkBit(board[0],i)) (row%2==1)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
+        else if(BitUtilities::checkBit(board[1],i)) (row%2==1)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
         else (row%2==1)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
     }    
     cout << "||\n =====================" << endl;
@@ -130,9 +125,9 @@ void displayBoard(unsigned int* board, unsigned int moveBoard, map<int, char>& i
             row++; //increment the row index every 4 steps
         }       
 
-        if(checkBit(board[0], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
-        else if(checkBit(board[1], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
-        else if(checkBit(moveBoard, i)) (row%2==1)?cout << boardParts[1] << " " << indexToChar[i] << " " : cout << indexToChar[i] << " " << boardParts[1] << " ";
+        if(BitUtilities::checkBit(board[0], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[0] << " " : cout << pieces[0] << " " << boardParts[1] << " ";
+        else if(BitUtilities::checkBit(board[1], i)) (row%2==1)?cout << boardParts[1] << " " << pieces[1] << " " : cout << pieces[1] << " " << boardParts[1] << " ";
+        else if(BitUtilities::checkBit(moveBoard, i)) (row%2==1)?cout << boardParts[1] << " " << indexToChar[i] << " " : cout << indexToChar[i] << " " << boardParts[1] << " ";
         else (row%1==1)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";
     }    
     cout << "||\n   =====================" << endl;
@@ -179,7 +174,7 @@ void gameController(unsigned int* board){
         moveController(current, board);
         std::tie(scores[0], scores[1]) = checkScore(board);
         running = (scores[0] == TOTAL_PIECES || scores[1] == TOTAL_PIECES)?false:true;
-        current = static_cast<Player>(flipNumber(current));
+        current = static_cast<Player>(BitUtilities::flipNumber(current));
     }
 }
 
@@ -193,7 +188,7 @@ std::tuple<int, int> checkScore(unsigned int* board){
 int countBits(int player, unsigned int* board){
     int count = 0;
     for(int i = 0 ; i < 32 ; i++){
-        count += (checkBit(board[player], i))?1:0;
+        count += (BitUtilities::checkBit(board[player], i))?1:0;
     }
     return count;
 }
@@ -282,7 +277,7 @@ void testMoveMapParts(unsigned int movesBoard, std::map<int, char>& indexToChar,
 void buildMovesMap(Player current, unsigned int* board, unsigned int& movesBoard, std::map<int, char>& indexToChar, std::map<char, vector<Move>>& charToPiece) {
     char moveMarkerCounter = 'A';
     for(int i = 0 ; i < 32 ; i++){
-        if(checkBit(board[current], i) == 0) continue; //check if there is a piece at the position, if not continue to the next location     
+        if(BitUtilities::checkBit(board[current], i) == 0) continue; //check if there is a piece at the position, if not continue to the next location     
         Border border = checkBorder(i); //check the position of the piece relative to the borders and store its state        
         std::vector<Move> moves; //TODO: Do I need to destroy Move Struct
                 
@@ -310,10 +305,10 @@ void buildMovesMap(Player current, unsigned int* board, unsigned int& movesBoard
 //Update the MovesCollection values that will be used to control moves in game
 void updateMovesParameters(const std::vector<Move>& moves, unsigned int& movesBoard, std::map<int, char>& indexToChar, std::map<char, vector<Move>>& charToPiece, char& moveMarker){    
     for(auto& move : moves){
-        if(checkBit(movesBoard, move.end)){
+        if(BitUtilities::checkBit(movesBoard, move.end)){
             charToPiece[indexToChar[move.end]].push_back(move);
         } else {
-            movesBoard = setBit(movesBoard, move.end);
+            movesBoard = BitUtilities::setBit(movesBoard, move.end);
             indexToChar[move.end] = moveMarker;
             charToPiece[moveMarker] = std::vector<Move>();
             charToPiece[moveMarker].push_back(move);
@@ -325,9 +320,9 @@ void updateMovesParameters(const std::vector<Move>& moves, unsigned int& movesBo
 //TODO: Maybe I don't need the pointer. Also I need to chop this up so that jump is seperate from checking for the move, or just send back a vector or pass the vector from caller. Drop the optional and switch to a void function that updates the moves at it goes
 //check the specified move, determine if it is suitable move orif a jump is required and succesful
 void checkMove(Player current, Border border, std::vector<Move>& moves, unsigned int* board, int i, int movePosition){
-    if(checkBit(board[current], movePosition)){        
+    if(BitUtilities::checkBit(board[current], movePosition)){        
         return ;
-    } else if(checkBit(board[flipNumber(current)], movePosition)){ //TODO: This may not work as I intend
+    } else if(BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], movePosition)){ //TODO: This may not work as I intend
         std::vector<int> opponents;
         getJumpMoves(moves, Move(i, -1, false, opponents), current, board, i, movePosition);
     } else {
@@ -383,15 +378,15 @@ tuple<bool, std::vector<int>> checkForOpponent(Player current, unsigned int* boa
         success = false;
     } else if(border == LEFT || border == RIGHT){
         locPoint = ((current == PLAYERONE)?(4+i):(-4+i));
-        success = checkBit(board[flipNumber(current)], locPoint);
+        success = BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], locPoint);
         if(success) oppPositions.push_back(locPoint);           
     } else {
         locPoint = (i + steps[current][((i/4)%2)][0]);
-        success = checkBit(board[flipNumber(current)], locPoint);
+        success = BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], locPoint);
         if(success) oppPositions.push_back(locPoint);
         
         locPoint = (i + steps[current][((i/4)%2)][1]);
-        success = checkBit(board[flipNumber(current)], locPoint);
+        success = BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], locPoint);
         if(success) oppPositions.push_back(locPoint);
     } 
 
@@ -421,17 +416,17 @@ std::tuple<bool, int> checkJump(Player current, unsigned int* board, int i, int 
         }        
     }
     success &= (current == PLAYERONE && dest > 31)||(current == PLAYERTWO && dest < 0)?0:1;
-    success &= (checkBit(board[current], dest) == 0 && checkBit(board[flipNumber(current)], dest) == 0)?1:0;
+    success &= (BitUtilities::checkBit(board[current], dest) == 0 && BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], dest) == 0)?1:0;
     return std::make_tuple(success, dest);
 }
 
 //flips all the required bit per move based on the Move struct that is passed to the func
 void executeMove(Player current, unsigned int* board, Move move){
-    board[current] = flipBit(board[current], move.start);
-    board[current] = flipBit(board[current], move.end);
+    board[current] = BitUtilities::flipBit(board[current], move.start);
+    board[current] = BitUtilities::flipBit(board[current], move.end);
     if(move.jump){
         for(auto& opp : move.opponent){
-            board[flipNumber(current)] = flipBit(board[flipNumber(current)], opp);
+            board[BitUtilities::flipNumber(current)] = BitUtilities::flipBit(board[BitUtilities::flipNumber(current)], opp);
         }
     }
 }
@@ -440,29 +435,6 @@ void executeMove(Player current, unsigned int* board, Move move){
 //TODO: display board overloaded to display available moves to the user that are mapped to letters
 
 //TODO: display all moves on the board for each player with letters mapped to integer location, use L or R if two pieces have a move.
-
-
-//build class for utilities
-//check value of bit return 1 or 0
-int checkBit(unsigned int num, int position){
-    return (num & (1 << position));
-}
-
-//set bit at given location to 1
-unsigned int setBit(unsigned int value, int position){    
-    return value | (1 << position);
-}
-
-//return the unsigned int after flipping the bit at the given location
-unsigned int flipBit(unsigned int value, int position){
-    return value ^ (1 << position);
-}
-
-//return flipped bit value
-int flipNumber(int value){
-    return value^1;
-}
-
 //returns a text based version of the coordinate of the point of the bit on the checker board
 string getCoor(int position){
     string coordinate;
