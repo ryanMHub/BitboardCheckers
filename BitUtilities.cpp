@@ -19,3 +19,12 @@ unsigned int BitUtilities::setBit(unsigned int value, int position){
 int BitUtilities::checkBit(unsigned int num, int position){
     return (num & (1 << position));
 }
+
+//counts the number of 1 bits in the given number
+int BitUtilities::countBits(int player, unsigned int* board){
+    int count = 0;
+    for(int i = 0 ; i < 32 ; i++){
+        count += (BitUtilities::checkBit(board[player], i))?1:0;
+    }
+    return count;
+}

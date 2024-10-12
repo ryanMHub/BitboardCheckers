@@ -14,6 +14,9 @@ public:
 
     //check value of bit return 1 or 0
     static int checkBit(unsigned int, int);
+
+    //counts the number of 1 bits in the given number
+    static int countBits(int, unsigned int*);
 };
 
 #endif
