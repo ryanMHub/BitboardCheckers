@@ -28,3 +28,12 @@ int BitUtilities::countBits(int player, unsigned int* board){
     }
     return count;
 }
+
+//merge the 1's in two unsigned integers and return a new integer.
+unsigned int BitUtilities::mergeBits(unsigned int a, unsigned int b){
+    unsigned int merged = 0;
+    for(int i = 0 ; i < 32 ; i++){
+        if(BitUtilities::checkBit(a, i) || BitUtilities::checkBit(b, i)) merged = BitUtilities::flipBit(merged, i);
+    }
+    return merged;
+}

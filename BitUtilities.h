@@ -17,6 +17,9 @@ public:
 
     //counts the number of 1 bits in the given number
     static int countBits(int, unsigned int*);
+
+    //merge bits 1 bits of two unsigned integers
+    static unsigned int mergeBits(unsigned int, unsigned int);
 };
 
 #endif
