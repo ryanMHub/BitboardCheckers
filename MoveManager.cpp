@@ -241,7 +241,7 @@ void MoveManager::executeMove(PlayerCode current, unsigned int* board, unsigned 
     if(move.jump){
         for(auto& opp : move.opponent){
             if(BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], opp)) board[BitUtilities::flipNumber(current)] = BitUtilities::flipBit(board[BitUtilities::flipNumber(current)], opp); //check if opponent is on main board
-            else kings[BitUtilities::flipNumber(current)] = BitUtilities::flipBit(kings[BitUtilities::flipNumber(current)], opp); //check if opponent is on kings board
+            else kingPiece(static_cast<PlayerCode>(BitUtilities::flipNumber(current)), board, kings, opp);//kings[BitUtilities::flipNumber(current)] = BitUtilities::flipBit(kings[BitUtilities::flipNumber(current)], opp); //check if opponent is on kings board
         }
     }
 
