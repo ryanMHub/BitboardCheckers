@@ -1,9 +1,9 @@
 #include "View.h"
 
 //initialize constants
-const char View::boardParts[2] = {176, 178}; //Characters that are used in building the board
-const char View::pieces[2] = {224,234}; //player pieces options
-const char View::kingPieces[2]= {157, 228}; //player pieces for kings
+const char View::boardParts[2] = {static_cast<char>(176), static_cast<char>(178)}; //Characters that are used in building the board
+const char View::pieces[2] = {static_cast<char>(224), static_cast<char>(234)}; //player pieces options
+const char View::kingPieces[2]= {static_cast<char>(157), static_cast<char>(228)}; //player pieces for kings
 const string View::colorSequence[4] = {"\033[32m", "\033[34m", "\033[31m", "\033[39m"}; //contains the const ansi escape codes for colors
 
 //display board
