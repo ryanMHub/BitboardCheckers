@@ -34,8 +34,8 @@ int main(){
 
 //initialize the game boards of each player with the given array
 void initializeBoard(unsigned int* board){
-    board[0] = 0x00000FFF; //initialize player 1
-    board[1] = 0xFFF00000; //initialize player 2
+    board[0] = 0x000F0F0F; //initialize player 1
+    board[1] = 0xF0F0F000; //initialize player 2
 }
 
 //This function is used to drive the control of the game

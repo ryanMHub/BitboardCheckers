@@ -33,13 +33,14 @@ private:
     void updateMovesParameters(const std::vector<Move>&, unsigned int&, std::map<int, char>&, std::map<char, std::vector<Move>>&, char&); //Does the actual modification to these data structures
     std::tuple<char, int> getUserSelection(std::map<char, std::vector<Move>>&); //gets the move decision from the user
     void checkMove(PlayerCode, bool, Border, std::vector<Move>&, unsigned int*, unsigned int*, int, int); //checks if there is an available move at the given destination, If jump is avaiable create recursion map of the move graph
-    void getJumpMoves(std::vector<Move>&, Move, PlayerCode, unsigned int*, unsigned int*,  int, int, unsigned int); //generate the move graph for the availbe jump moves from each location from a starting point
+    bool getJumpMoves(std::vector<Move>&, Move, PlayerCode, unsigned int*, unsigned int*,  int, int, unsigned int); //generate the move graph for the availbe jump moves from each location from a starting point
     std::tuple<bool, std::vector<int>> checkForOpponent(PlayerCode, bool, unsigned int, int); //check if there is an avaiable opponent within distance    
     bool registerOpponent(int, unsigned int, std::vector<int>&); //Adds an opponents index to the vector of relative opponents if there is one at the localPoint
-    std::tuple<bool, int> checkJump(PlayerCode, unsigned int*, unsigned int*, int, int); //check if the jump was successful
+    std::tuple<bool, int> checkJump(PlayerCode, unsigned int*, unsigned int*, int, int, unsigned int); //check if the jump was successful
     void executeMove(PlayerCode, unsigned int*, unsigned int*, Move); //Actually executes the select move plan   
     void swapPosition(PlayerCode, unsigned int*, Move);  //swaps the position of each position from start to dest
-    void kingPiece(PlayerCode, unsigned int*, unsigned int*, int);//king the player's piece    
+    void kingPiece(PlayerCode, unsigned int*, unsigned int*, int);//king the player's piece        
+    bool checkBase(Border, PlayerCode); //checks if piece is in base
     Border checkBorder(int); //get the position of piece relative to border 
     std::string getCoor(int); //Return the xy location for the index of the piece that was passed to it
     

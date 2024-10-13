@@ -34,8 +34,8 @@ void View::displayBoard(unsigned int* board, unsigned int* kings, unsigned int m
     char rowMarker = 'A';
     string playerLabel = "             Player One      Player Two";
     string scoreStr = "                  " + std::to_string(score[0]) + "               " + std::to_string(score[1]);
-    cout << "   ===0=1=2=3=4=5=6=7===" << endl;
-    cout << "   =====================";
+    cout << "  ===0=1=2=3=4=5=6=7===" << endl;
+    cout << "  =====================";
     for(int i = 0 ; i < 32 ; i++){
         
         if(i%4 == 0){
@@ -51,7 +51,7 @@ void View::displayBoard(unsigned int* board, unsigned int* kings, unsigned int m
         else if(!indexToChar.empty() && BitUtilities::checkBit(moveBoard, i)) (row%2==1)?cout << boardParts[1] << " " << getColorCode(RED) << indexToChar[i] << getColorCode(DEFAULT) << " " : cout << getColorCode(RED) << indexToChar[i] << getColorCode(DEFAULT) << " " << boardParts[1] << " ";
         else (row%2==1)?cout << boardParts[1] << " " << boardParts[0] << " ": cout << boardParts[0] << " " << boardParts[1] << " ";        
     }    
-    cout << "||\n   =====================" << endl;
+    cout << "||\n  =====================" << endl;
 }
 
 void View::displayWinner(string player, string message){

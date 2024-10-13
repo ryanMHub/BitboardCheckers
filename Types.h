@@ -37,10 +37,11 @@ struct Move {
     int end; //ending location of the move
     bool jump; //signifies that is a jump move over an opponent
     bool isKing; //signifies that the players piece is a king
+    bool mustKing; //signifies if the piece got kinged during a jump sequence
     std::vector<int> opponent; //stores the index of all opponenets that are captured during the move
 
     //constructor for Move struct
-    Move(int start, int end, bool jump, bool king, std::vector<int> opponent) : start(start), end(end), jump(jump), isKing(king), opponent(opponent) {}
+    Move(int start, int end, bool jump, bool king, std::vector<int> opponent) : start(start), end(end), jump(jump), isKing(king), mustKing(false), opponent(opponent) {}
 };
 
 #endif
