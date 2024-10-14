@@ -7,7 +7,6 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include <optional> //TODO: possibly not used
 #include <tuple>
 
 using namespace std;
@@ -16,9 +15,9 @@ using namespace std;
 void initializeBoard(unsigned int*); //intitialize player boards
 
 //game management
-void gameController(unsigned int*, unsigned int*);
-void gameOver(int scores[], PlayerCode current);
-std::tuple<int, int> checkScore(unsigned int*, unsigned int*);
+void gameController(unsigned int*, unsigned int*); //main game control
+void gameOver(int scores[], PlayerCode current); //builds the necessary strings to display at gameover
+std::tuple<int, int> checkScore(unsigned int*, unsigned int*); //gets the score for each user
 
 //Test Functions
 void testMoveMapParts(unsigned int, std::map<int, char>&, std::map<char, vector<Move>>&);
@@ -28,7 +27,7 @@ void testSelection(std::tuple<char, int>);
 int main(){    
     unsigned int board[2]; //this array will store the boards for player 1 = board[0] and player 2 = board[1]
     unsigned int kings[2]; //this array will store the boards specifically for the pieces that have been kinged
-    gameController(board, kings);
+    gameController(board, kings); //execute the game
     return 0;    
 }
 
@@ -57,34 +56,33 @@ void gameController(unsigned int* board, unsigned int* kings){
     PlayerCode current = playerOne.getCode(); //initialize the starting player
     bool running = true; //initialize the state of the game
     int scores[] = {0, 0}; //start each player at a score of 0
-
-    //TODO: Determine how I'm going to declare winner based on blocked or less pieces 
+     
     //loop while running is true, changes when a player collects all pieces, or player has no move.
     while(running){
-        View::displayCurrentBoard(current, board, kings, scores);
+        View::displayCurrentBoard(current, board, kings, scores); //display state of game before player moves
         View::pause();
         View::clear();
-        running = moveManager->moveController(current, board, kings, scores);
-        //TODO: needs to check both king and main boards
-        std::tie(scores[0], scores[1]) = checkScore(board, kings);
-        running &= (scores[0] == TOTAL_PIECES || scores[1] == TOTAL_PIECES)?false:true;
-        current = static_cast<PlayerCode>(BitUtilities::flipNumber(current));
+        running = moveManager->moveController(current, board, kings, scores); //execute the move process for current player, if false current player has no moves. Forfeit
+        std::tie(scores[0], scores[1]) = checkScore(board, kings); //update the current scores for each player
+        running &= (scores[0] == TOTAL_PIECES || scores[1] == TOTAL_PIECES)?false:true; //Check if there is a winner and update running 
+        current = static_cast<PlayerCode>(BitUtilities::flipNumber(current)); //change to the next player by flip LSD in current playerCode
         View::clear();
     }
 
-    gameOver(scores, current);
+    gameOver(scores, current); //display to the user who won
     cout << '\n';
     View::pause();
 }
 
 //return each players score by counting 
 std::tuple<int, int> checkScore(unsigned int* board, unsigned int* kings){
-    int playerOne = BitUtilities::countBits(0, board);
+    //accumulate all of the on bits that each player has in each unsigned int
+    int playerOne = BitUtilities::countBits(0, board); 
     playerOne += BitUtilities::countBits(0, kings);
     int playerTwo = BitUtilities::countBits(1, board);
     playerTwo += BitUtilities::countBits(1, kings);
     
-    return std::make_tuple((TOTAL_PIECES-playerTwo), (TOTAL_PIECES-playerOne));
+    return std::make_tuple((TOTAL_PIECES-playerTwo), (TOTAL_PIECES-playerOne)); //return as a tuple once current of opposite player is deducted from Total pieces
 }
 
 //displays the winner of the game
@@ -92,11 +90,13 @@ void gameOver(int scores[], PlayerCode current){
     string player = "";
     string message = "";
 
+    //If a player forfeited record the winner by the opposite of the current player
     if(scores[0] < TOTAL_PIECES && scores[1] < TOTAL_PIECES){
         player = (current == PLAYERONE)?"One":"Two";
         string loser = ((current == PLAYERONE)?"Two":"One");
         message = "                  Player " + loser +" Forfeits";
     } else {
+        //check who has no more pieces and then declare winner
         player = (scores[0] == TOTAL_PIECES)?"One":"Two";
         string left = (scores[0] == TOTAL_PIECES)?std::to_string(TOTAL_PIECES-scores[1]):std::to_string(TOTAL_PIECES-scores[0]);
         message = "             Player " + player + " Has " + left + " Pieces Left";

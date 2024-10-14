@@ -5,10 +5,10 @@ MoveManager* MoveManager::instance = nullptr;
 
 //execute all of the required functionality for the move process
 bool MoveManager::moveController(PlayerCode current, unsigned int* board, unsigned int* kings, int score[]){
-    //initialize int moves, map index to 'Char' increment using above idea, map 'Char' to set of struct move
-    unsigned int movesBoard = 0;
-    std::map<int, char> indexToChar;
-    std::map<char, std::vector<Move>> charToPiece;
+    //initialize all of the Move Collections
+    unsigned int movesBoard = 0; //maps all the potential move destinations by flipping index bit
+    std::map<int, char> indexToChar; //link each index to a specific character
+    std::map<char, std::vector<Move>> charToPiece; //link that character to each Move
     
     //call function to get moves passing all above as reference.
     buildMovesMap(current, board, kings, movesBoard, indexToChar, charToPiece);    
@@ -34,8 +34,10 @@ bool MoveManager::moveController(PlayerCode current, unsigned int* board, unsign
 
 //build all of the possible moves for player based on Player current
 void MoveManager::buildMovesMap(PlayerCode current, unsigned int* board, unsigned int* kings, unsigned int& movesBoard, std::map<int, char>& indexToChar, std::map<char, vector<Move>>& charToPiece) {
-    char moveMarkerCounter = 'A';
-    std::vector<Move> moves;
+    char moveMarkerCounter = 'A'; //used to map index of potential moves. Increments on each new destination.
+    std::vector<Move> moves; //Will store all of the potential moves before adding them to the Move Collections
+
+    //loop through each index checking if there is a move available
     for(int i = 0 ; i < 32 ; i++){
         if(BitUtilities::checkBit(board[current], i) == 0 && BitUtilities::checkBit(kings[current], i) == 0) continue; //check if there is a piece at the position, if not continue to the next location     
         
@@ -45,22 +47,28 @@ void MoveManager::buildMovesMap(PlayerCode current, unsigned int* board, unsigne
         //Determine all directions that the current piece can move based on its location      
         if(border == TOP || border == RIGHT_TOP) {            
             if(border == TOP){
-                checkMove(current, isKing, border, moves, board, kings, i, (i + steps[0][0][0]));                                   
+                //All potential moves available for an index at top
+                checkMove(current, isKing, border, moves, board, kings, i, (i + steps[0][0][0])); //**************The steps array stores all of the potential moves based on Player, row odd or even, left or right move using a 3D array */ 
                 checkMove(current, isKing, border, moves, board, kings, i, (i + steps[0][0][1]));
             } else {
+                //available moves for an index that is Right top
                 checkMove(current, isKing, border, moves, board, kings, i, (4+i));
             }
         } else if((border == BOTTOM || border == LEFT_BOTTOM)){
+            //All potential moves available for an index at bottom
             if(border == BOTTOM){
                 checkMove(current, isKing, border, moves, board, kings, i, (i + steps[1][1][0]));                                   
                 checkMove(current, isKing, border, moves, board, kings, i, (i + steps[1][1][1]));
             } else {
+                //available moves for an index that is left bottom
                 checkMove(current, isKing, border, moves, board, kings, i, (-4+i));
             }
-        } else if(border == LEFT  || border == RIGHT){            
+        } else if(border == LEFT  || border == RIGHT){
+            //all available moves if index on left or right if the piece is king the if statement will execute        
             checkMove(current, isKing, border, moves, board, kings, i, ((current == PLAYERONE)?(4+i):(-4+i)));
             if(isKing) checkMove(current, isKing, border, moves, board, kings, i, ((current == PLAYERTWO)?(4+i):(-4+i)));
-        } else {            
+        } else {       
+            //all of these moves are available to a piece that is in an open location in the middle of the board     
             checkMove(current, isKing, border, moves, board, kings, i, (i + steps[current][((i/4)%2)][0]));
             checkMove(current, isKing, border, moves, board, kings, i, (i + steps[current][((i/4)%2)][1]));
             if(isKing) {
@@ -77,10 +85,11 @@ void MoveManager::buildMovesMap(PlayerCode current, unsigned int* board, unsigne
 
 //Update the MovesCollection values that will be used to control moves in game
 void MoveManager::updateMovesParameters(const std::vector<Move>& moves, unsigned int& movesBoard, std::map<int, char>& indexToChar, std::map<char, vector<Move>>& charToPiece, char& moveMarker){    
-    bool manJump = false;
-    for(auto& move : moves) manJump |= move.jump;
+    bool manJump = false; //used to determine if the player has a mandatory jump
+    for(auto& move : moves) manJump |= move.jump; //loop through each move checking if at least one of them is a jump
+    //loop through all available moves
     for(auto& move : moves){
-        if(manJump && !move.jump) continue;
+        if(manJump && !move.jump) continue; //if mandatory jump is present. continue for all move that are not a jump
         //if the current moves destination has already been determined for a move previously, add that specific move to the key for that index associated with a Letter
         if(BitUtilities::checkBit(movesBoard, move.end)){
             charToPiece[indexToChar[move.end]].push_back(move);
@@ -101,13 +110,13 @@ void MoveManager::checkMove(PlayerCode current, bool isKing, Border border, std:
     //if there is already the currents player's piece at the destination return
     if(BitUtilities::checkBit(board[current], movePosition) || BitUtilities::checkBit(kings[current], movePosition)){        
         return ;
-    } else if(BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], movePosition) || BitUtilities::checkBit(kings[BitUtilities::flipNumber(current)], movePosition)){ //if there is a main or king piece of the opponent, execute jump sequencing
-        std::vector<int> opponents;
-        getJumpMoves(moves, Move(i, -1, false, isKing, opponents), current, board, kings, i, movePosition, BitUtilities::mergeBits(board[BitUtilities::flipNumber(current)], kings[BitUtilities::flipNumber(current)]));
+    } else if(BitUtilities::checkBit(board[BitUtilities::flipNumber(current)], movePosition) || BitUtilities::checkBit(kings[BitUtilities::flipNumber(current)], movePosition)){ //if there is a main or king piece for the opponent at this index, execute jump sequencing
+        std::vector<int> opponents; //declare a vector to store all of the opponent indexs for each move that is captured
+        getJumpMoves(moves, Move(i, -1, false, isKing, opponents), current, board, kings, i, movePosition, BitUtilities::mergeBits(board[BitUtilities::flipNumber(current)], kings[BitUtilities::flipNumber(current)])); //execute the recursive dfs function to build graph of moves
     } else {
         //else just log a normal move
-        std::vector<int> opponents;
-        moves.push_back(Move(i, movePosition, false, isKing, opponents));
+        std::vector<int> opponents; //create an empty opponent vector
+        moves.push_back(Move(i, movePosition, false, isKing, opponents)); //add a standard move to the array, because if it gets to this point the index is open
     }   
 }
 
@@ -116,7 +125,8 @@ bool MoveManager::getJumpMoves(std::vector<Move>& moves, Move move, PlayerCode c
     //if no open space or out or bounds return
     int dest;
     bool success;    
-    std::tie(success, dest) = checkJump(current, board, kings, i, opponent, currOpps);
+    std::tie(success, dest) = checkJump(current, board, kings, i, opponent, currOpps); //check to see if the index that is at the destination after jumping opponents index is open
+    //base case if jump is not successful terminate
     if(!success){              
         return false;
     }
@@ -125,7 +135,7 @@ bool MoveManager::getJumpMoves(std::vector<Move>& moves, Move move, PlayerCode c
     //store the current Move    
     move.end = dest;
     move.jump = true;
-    move.opponent.push_back(opponent);
+    move.opponent.push_back(opponent); //add the opponents index to the back of the vector
     
     //king the piece if it lands on base during the jump sequence to expand jump capabilities and then mark move as requiring a king once the move is over
     Border border = checkBorder(dest);
@@ -135,7 +145,7 @@ bool MoveManager::getJumpMoves(std::vector<Move>& moves, Move move, PlayerCode c
     }
 
     //update currOpps map
-    currOpps = BitUtilities::flipBit(currOpps, opponent);
+    currOpps = BitUtilities::flipBit(currOpps, opponent); //currOpps is an unsigned int that stores the opponents standard and kinged pieces to one board. That way as the jump sequence occurs the state can be recorded with out manipulating the game board prematurlly
 
     //get available opponents to capture
     std::vector<int> opponents;
@@ -145,7 +155,7 @@ bool MoveManager::getJumpMoves(std::vector<Move>& moves, Move move, PlayerCode c
     bool lastStop = false;
     for(auto& opp : opponents){            
         //check all leaves if a leaf is successful this is not the last stop.
-        lastStop |= getJumpMoves(moves, move, current, board, kings, dest, opp, currOpps);
+        lastStop |= getJumpMoves(moves, move, current, board, kings, dest, opp, currOpps); //returns false if base case is reached, if it remains true using an or statement that means that this current move calling the recursion is not the final destination
     }
     //If no leafs were successful record this jump as the last stop
     if(!lastStop) moves.push_back(move);
@@ -156,11 +166,11 @@ bool MoveManager::getJumpMoves(std::vector<Move>& moves, Move move, PlayerCode c
 
 //checks if there are available opponents for the piece to jump over. A success flag and a vector filled with the indexes of the available opponents is returned.
 tuple<bool, std::vector<int>> MoveManager::checkForOpponent(PlayerCode current, bool isKing, unsigned int oppMap, int i) {
-    bool success = false;
-    std::vector<int> oppPositions;
-    int locPoint = -1;
-    Border border = checkBorder(i);
+    bool success = false; //remains false if no opponents available
+    std::vector<int> oppPositions; //used to build a collection of available opponents    
+    Border border = checkBorder(i); //determines where the current piece is located on the board relative to the borders
 
+    //Step through each state of the index checking the potential opponents available
     if(border == TOP || border == RIGHT_TOP) {
         if(border == TOP){
             success |= MoveManager::registerOpponent((i + steps[0][0][0]), oppMap, oppPositions);
@@ -191,7 +201,7 @@ tuple<bool, std::vector<int>> MoveManager::checkForOpponent(PlayerCode current, 
 }
 
 //Adds an opponents index to the vector of relative opponents if there is one at the localPoint
-bool MoveManager::registerOpponent(int localPoint, unsigned int oppMap, std::vector<int>& oppPositions){
+bool MoveManager::registerOpponent(int localPoint, unsigned int oppMap, std::vector<int>& oppPositions){    
     bool success = BitUtilities::checkBit(oppMap, localPoint);
     if(success) oppPositions.push_back(localPoint);
     return success;
@@ -199,12 +209,13 @@ bool MoveManager::registerOpponent(int localPoint, unsigned int oppMap, std::vec
 
 //checks if the jump is successful returning a success flag and the index of the landing location in a tuple.
 std::tuple<bool, int> MoveManager::checkJump(PlayerCode current, unsigned int* board, unsigned int* kings, int i, int oppPosition, unsigned int oppMap){
-    int dest = -1;
-    bool success = true;
+    int dest = -1; //if the value remains -1 there is no available move
+    bool success = true; //must remain true to be a valid jump
     Border border = checkBorder(i);
-    int row = (i/4)%2;
-    int diff = abs(oppPosition-i);
+    int row = (i/4)%2; //determine if the board is even or odd
+    int diff = abs(oppPosition-i); //determine the distance between each opponent and piece
 
+    //Based on the border position. distance between pieces, odd or even row, and wheter or not the piece is moving forward or backword
     if(border == LEFT || border == LEFT_BOTTOM){
         dest = (i<oppPosition)?(i+9):(i-7);        
     } else if( border == RIGHT || border == RIGHT_TOP){
@@ -216,11 +227,11 @@ std::tuple<bool, int> MoveManager::checkJump(PlayerCode current, unsigned int* b
             dest = (i<oppPosition)?(i+7):(i-7);
         } else {
             dest = (i<oppPosition)?((row == 0)?(i+7):(i+9)):((row==0)?(i-9):(i-7));
-            success &= (!(i%4 == 0 || i%4 == 3)); //TODO: NOt sure if works. prevents the edge cases that are not on the border but the adjacent side preventing attempt to jump over opponent out of bounds 
+            success &= (!(i%4 == 0 || i%4 == 3)); //prevents the edge cases that are not on the border but the adjacent side preventing attempt to jump over opponent out of bounds 
         }        
     }
     //determine if dest is in bounds
-    success &= ((dest < 31)&&(dest > 0));
+    success &= ((dest < 32)&&(dest >= 0));
     //determine if dest is open
     success &= (BitUtilities::checkBit(board[current], dest) == 0 && BitUtilities::checkBit(kings[current], dest) == 0) && BitUtilities::checkBit(oppMap, dest)==0;
 
@@ -230,12 +241,12 @@ std::tuple<bool, int> MoveManager::checkJump(PlayerCode current, unsigned int* b
 
 //flips all the required bit per move based on the Move struct that is passed to the func
 void MoveManager::executeMove(PlayerCode current, unsigned int* board, unsigned int* kings, Move move){
-    //determines if the player's piece needs to flip the kings board or main board
+    //If the piece was kinged during the jump sequece swap position and king piece
     if(move.mustKing){
         swapPosition(current, board, move);
         kingPiece(current, board, kings, move.end);
-    } else if(move.isKing) swapPosition(current, kings, move);
-    else swapPosition(current, board, move);
+    } else if(move.isKing) swapPosition(current, kings, move); //the piece is already kinged execute swap on that unsigned int
+    else swapPosition(current, board, move); //standard piece execute swap
 
     //flip all opponents bits that are captured during the move
     if(move.jump){
@@ -283,7 +294,6 @@ string MoveManager::getCoor(int position){
     return coordinate;    
 }
 
-//TODO: Make sure I include the top right and left bottom in necessary spots
 //return the state of the position of the current integer relative to the border
 Border MoveManager::checkBorder(int position){
     if(position >= 0 && position <= 3) {        

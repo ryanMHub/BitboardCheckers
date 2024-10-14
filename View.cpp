@@ -8,16 +8,15 @@ const string View::colorSequence[4] = {"\033[32m", "\033[34m", "\033[31m", "\033
 
 //display board
 void View::displayCurrentBoard(PlayerCode current, unsigned int* board, unsigned int* kings, int score[]){
-    displayCurrentPlayer(current);
-    map<int, char> empty;
-    View::displayBoard(board, kings, 0, empty, score);
+    displayCurrentPlayer(current); //displays what players turn it is
+    map<int, char> empty; //sentinal map 
+    View::displayBoard(board, kings, 0, empty, score); //display the current state of the game
 }
 
-//TODO: I don't think I need that reference to the map
 //display board including the available moves
 void View::displayPlayerMoves(PlayerCode current, unsigned int* board, unsigned int* kings, unsigned int moveBoard, map<int, char>& indexToChar, int score[]){
     displayCurrentPlayer(current); //display current player
-    displayBoard(board, kings, moveBoard, indexToChar, score);
+    displayBoard(board, kings, moveBoard, indexToChar, score); //displays the current state of the game with the provided moves presented
 }
 
 //display current player
@@ -30,20 +29,22 @@ void View::displayCurrentPlayer(PlayerCode current){
 
 //print the board
 void View::displayBoard(unsigned int* board, unsigned int* kings, unsigned int moveBoard, map<int, char>& indexToChar, int score[]) {
-    int row = 0;
-    char rowMarker = 'A';
+    int row = 0; //current row
+    char rowMarker = 'A'; //marker increments after each new row
+    //both of these strings are used to display the score
     string playerLabel = "             Player One      Player Two";
     string scoreStr = "                  " + std::to_string(score[0]) + "               " + std::to_string(score[1]);
-    cout << "  ===0=1=2=3=4=5=6=7===" << endl;
+    cout << "  ===0=1=2=3=4=5=6=7===" << endl; //used as a coordinate system
     cout << "  =====================";
     for(int i = 0 ; i < 32 ; i++){
-        
+        //creates the border to the game
         if(i%4 == 0){
             (i==0)?cout << "\nA-|| ": cout << "||"<<((i==8)?playerLabel:"") << ((i==16)?scoreStr:"") << "\n" << rowMarker <<"-|| "; //every 4 steps start a new line and print borders
             rowMarker++;
             row++; //increment the row index every 4 steps
         }       
 
+        //which ever on of these unsigned integers has a 1 for the current index display its value, everything else is just used for display
         if(BitUtilities::checkBit(board[0], i)) (row%2==1)?cout << boardParts[1] << " " << getColorCode(GREEN) << pieces[0] << getColorCode(DEFAULT) << " " : cout << getColorCode(GREEN) << pieces[0] << getColorCode(DEFAULT) << " " << boardParts[1] << " ";
         else if(BitUtilities::checkBit(kings[0],i)) (row%2==1)?cout << boardParts[1] << " " << getColorCode(GREEN) << kingPieces[0] << getColorCode(DEFAULT) << " " : cout << getColorCode(GREEN) << kingPieces[0] << getColorCode(DEFAULT) << " " << boardParts[1] << " ";
         else if(BitUtilities::checkBit(board[1], i)) (row%2==1)?cout << boardParts[1] << " " << getColorCode(BLUE) << pieces[1] << getColorCode(DEFAULT) << " " : cout << getColorCode(BLUE) << pieces[1] << getColorCode(DEFAULT) << " " << boardParts[1] << " ";
@@ -54,6 +55,7 @@ void View::displayBoard(unsigned int* board, unsigned int* kings, unsigned int m
     cout << "||\n  =====================" << endl;
 }
 
+//displays winner based on given values
 void View::displayWinner(string player, string message){
     cout << "******************* Player " << player << " Wins ***********************\n";
     cout << message;
@@ -80,6 +82,7 @@ void View::pause(){
     cin.get();
 }
 
+//clear screen
 void View::clear(){
     cout << "\033[2J\033[H";
 }
